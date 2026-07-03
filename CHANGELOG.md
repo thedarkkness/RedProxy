@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.5] - 2026-07-04
+
+### Fixed
+- `install.sh` accepted whatever port the user typed (default 443) without checking if it was already bound. On any server that already runs a web/mail stack on 443 (very common), Xray would fail to bind (`bind: address already in use`), the config would look completely correct, and `redproxy-xray` would silently crash-loop under systemd (`Start request repeated too quickly`) — so clients connected but every session timed out. The port prompt now checks with `ss` before proceeding and, if the port is taken, shows what's holding it and asks again instead of generating a config for a service that can't start.
+
+### Added
+- `port_in_use` / `port_owner` helpers in `utils/common.sh`, reusable by the future "Change Port" menu action.
+
 ## [0.0.4] - 2026-07-04
 
 ### Fixed

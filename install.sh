@@ -131,7 +131,16 @@ read -rp "> " choice
 
 case "$choice" in
     1)
-        read -rp "$(m "Port [443]: " "Порт [443]: ")" port; port=${port:-443}
+        while true; do
+            read -rp "$(m "Port [443]: " "Порт [443]: ")" port; port=${port:-443}
+            if port_in_use "$port"; then
+                warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
+                port_owner "$port"
+                warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
+                continue
+            fi
+            break
+        done
         read -rp "$(m "SNI to masquerade as [www.microsoft.com]: " "SNI для маскировки [www.microsoft.com]: ")" sni; sni=${sni:-www.microsoft.com}
         # shellcheck source=./xray/reality.sh
         source "$INSTALL_DIR/xray/reality.sh"
