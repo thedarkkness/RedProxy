@@ -14,6 +14,7 @@ XRAY_BIN="/usr/local/bin/xray"
 source "$INSTALL_DIR/utils/colors.sh"
 # shellcheck source=../utils/common.sh
 source "$INSTALL_DIR/utils/common.sh"
+load_lang
 
 reality_install() {
     local port="${1:-443}"
@@ -21,7 +22,7 @@ reality_install() {
 
     mkdir -p "$INSTALL_DIR/configs" "$CLIENTS_DIR"
 
-    info "Generating Reality X25519 keypair..."
+    info "$(m "Generating Reality X25519 keypair..." "Генерирую пару ключей X25519 для Reality...")"
     local keys priv pub
     keys=$("$XRAY_BIN" x25519)
     priv=$(echo "$keys" | awk '/Private key:/ {print $3}')
@@ -44,7 +45,7 @@ reality_install() {
           '{protocol:"vless-reality", port:($port|tonumber), sni:$sni, dest:$dest, private_key:$priv, public_key:$pub, short_id:$sid}' \
           > "$META_FILE"
 
-    ok "VLESS+Reality core config created (port $port, sni $sni)"
+    ok "$(m "VLESS+Reality core config created (port $port, sni $sni)" "Базовый конфиг VLESS+Reality создан (порт $port, sni $sni)")"
 
     systemctl enable redproxy-xray >/dev/null 2>&1
 
@@ -53,9 +54,9 @@ reality_install() {
 
 reality_add_client() {
     local name="${1:-}"
-    [[ -n "$name" ]] || { read -rp "Client name: " name; }
-    [[ -f "$CONFIG_FILE" ]] || { err "Reality is not installed yet. Run the installer first."; return 1; }
-    [[ -f "$CLIENTS_DIR/${name}.json" ]] && { err "Client '$name' already exists"; return 1; }
+    [[ -n "$name" ]] || { read -rp "$(m "Client name: " "Имя клиента: ")" name; }
+    [[ -f "$CONFIG_FILE" ]] || { err "$(m "Reality is not installed yet. Run the installer first." "Reality ещё не установлен. Сначала запустите установщик.")"; return 1; }
+    [[ -f "$CLIENTS_DIR/${name}.json" ]] && { err "$(m "Client '$name' already exists" "Клиент '$name' уже существует")"; return 1; }
 
     local uuid
     uuid=$("$XRAY_BIN" uuid)
@@ -86,8 +87,8 @@ reality_add_client() {
 
 reality_remove_client() {
     local name="${1:-}"
-    [[ -n "$name" ]] || { read -rp "Client name: " name; }
-    [[ -f "$CLIENTS_DIR/${name}.json" ]] || { err "Client '$name' not found"; return 1; }
+    [[ -n "$name" ]] || { read -rp "$(m "Client name: " "Имя клиента: ")" name; }
+    [[ -f "$CLIENTS_DIR/${name}.json" ]] || { err "$(m "Client '$name' not found" "Клиент '$name' не найден")"; return 1; }
 
     local uuid
     uuid=$(jq -r '.uuid' "$CLIENTS_DIR/${name}.json")
@@ -97,16 +98,16 @@ reality_remove_client() {
 
     rm -f "$CLIENTS_DIR/${name}.json" "$CLIENTS_DIR/${name}.link"
     systemctl restart redproxy-xray
-    ok "Client '$name' removed"
+    ok "$(m "Client '$name' removed" "Клиент '$name' удалён")"
 }
 
 reality_list_clients() {
     if [[ ! -d "$CLIENTS_DIR" ]] || [[ -z "$(ls -A "$CLIENTS_DIR" 2>/dev/null)" ]]; then
-        warn "No clients yet"
+        warn "$(m "No clients yet" "Клиентов пока нет")"
         return 0
     fi
 
-    printf "  %-20s %-38s %s\n" "NAME" "UUID" "CREATED"
+    printf "  %-20s %-38s %s\n" "$(m "NAME" "ИМЯ")" "UUID" "$(m "CREATED" "СОЗДАН")"
     for f in "$CLIENTS_DIR"/*.json; do
         [[ -e "$f" ]] || continue
         local name uuid created
@@ -119,8 +120,8 @@ reality_list_clients() {
 
 reality_show_qr() {
     local name="${1:-}"
-    [[ -n "$name" ]] || { read -rp "Client name: " name; }
-    [[ -f "$CLIENTS_DIR/${name}.link" ]] || { err "Client '$name' not found"; return 1; }
+    [[ -n "$name" ]] || { read -rp "$(m "Client name: " "Имя клиента: ")" name; }
+    [[ -f "$CLIENTS_DIR/${name}.link" ]] || { err "$(m "Client '$name' not found" "Клиент '$name' не найден")"; return 1; }
 
     local link
     link=$(cat "$CLIENTS_DIR/${name}.link")
@@ -131,21 +132,21 @@ reality_show_qr() {
 print_client_card() {
     local name="$1" uuid="$2" ip="$3" port="$4" sni="$5" pub="$6" sid="$7" link="$8"
     line
-    echo -e " ${BOLD}RedProxy Client: ${name}${NC}"
+    echo -e " ${BOLD}$(m "RedProxy Client" "Клиент RedProxy"): ${name}${NC}"
     line
-    echo -e " Protocol  : VLESS + Reality"
-    echo -e " Server    : ${ip}"
-    echo -e " Port      : ${port}"
-    echo -e " UUID      : ${uuid}"
-    echo -e " Flow      : xtls-rprx-vision"
-    echo -e " SNI       : ${sni}"
-    echo -e " PublicKey : ${pub}"
-    echo -e " ShortId   : ${sid}"
+    printf " %-10s: %s\n" "$(m "Protocol" "Протокол")" "VLESS + Reality"
+    printf " %-10s: %s\n" "$(m "Server" "Сервер")" "$ip"
+    printf " %-10s: %s\n" "$(m "Port" "Порт")" "$port"
+    printf " %-10s: %s\n" "UUID" "$uuid"
+    printf " %-10s: %s\n" "Flow" "xtls-rprx-vision"
+    printf " %-10s: %s\n" "SNI" "$sni"
+    printf " %-10s: %s\n" "PublicKey" "$pub"
+    printf " %-10s: %s\n" "ShortId" "$sid"
     line
     echo "$link"
     line
     render_qr "$link"
     line
-    echo -e " Saved: ${CLIENTS_DIR}/${name}.json"
+    printf " %s: %s\n" "$(m "Saved" "Сохранено")" "${CLIENTS_DIR}/${name}.json"
     line
 }

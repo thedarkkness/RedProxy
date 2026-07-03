@@ -9,6 +9,7 @@ configs/
 clients/*.json
 clients/*.link
 backups/
+lang
 *.log
 
 .DS_Store

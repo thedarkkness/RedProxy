@@ -5,21 +5,22 @@ set -euo pipefail
 INSTALL_DIR="/opt/redproxy"
 # shellcheck source=./utils/colors.sh
 source "$INSTALL_DIR/utils/colors.sh"
+load_lang
 
 if [[ "$EUID" -ne 0 ]]; then
-    err "Run as root"
+    err "$(m "Run as root" "Запустите от root")"
     exit 1
 fi
 
-info "Backing up configs..."
+info "$(m "Backing up configs..." "Резервное копирование конфигов...")"
 bash "$INSTALL_DIR/utils/backup.sh"
 
-info "Pulling latest RedProxy scripts..."
+info "$(m "Pulling latest RedProxy scripts..." "Загружаю последнюю версию скриптов RedProxy...")"
 git -C "$INSTALL_DIR" pull --quiet
 chmod +x "$INSTALL_DIR"/*.sh "$INSTALL_DIR"/xray/*.sh "$INSTALL_DIR"/wireguard/*.sh "$INSTALL_DIR"/utils/*.sh
 
-info "Updating Xray-core..."
+info "$(m "Updating Xray-core..." "Обновляю Xray-core...")"
 bash "$INSTALL_DIR/xray/install_xray.sh"
 
 systemctl restart redproxy-xray
-ok "RedProxy updated and restarted"
+ok "$(m "RedProxy updated and restarted" "RedProxy обновлён и перезапущен")"

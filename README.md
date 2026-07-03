@@ -9,8 +9,13 @@ panel required.
 bash <(curl -fsSL https://raw.githubusercontent.com/thedarkkness/RedProxy/main/install.sh)
 ```
 
+The installer's first prompt lets you pick a language — `1) English` or
+`2) Русский` — and every RedProxy script (installer, menu, client
+management) speaks that language from then on.
+
 ## What the installer does
 
+- ✓ Asks for a language (English / Русский)
 - ✓ Detects the OS and installs dependencies
 - ✓ Configures the firewall (UFW / firewalld)
 - ✓ Enables BBR congestion control
