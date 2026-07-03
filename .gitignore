@@ -1,0 +1,14 @@
+# Python venv (created locally by utils/venv_setup.sh — not committed;
+# it's platform-specific and belongs on the target host, not in git)
+.venv/
+__pycache__/
+*.pyc
+
+# Runtime data (only ever populated on a deployed server, not in this repo)
+configs/
+clients/*.json
+clients/*.link
+backups/
+*.log
+
+.DS_Store
