@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.4] - 2026-07-04
+
+### Fixed
+- `install.sh` printed a hardcoded `VERSION="0.0.1"` in its banner and log lines, independent of the repo's actual `VERSION` file — every patch release since 0.0.1 was invisible to anyone running the one-line installer. It now fetches `VERSION` from the repo at the start of the script (the installer runs before anything is cloned locally, so this is the only point it can read the real value from) instead of hardcoding a copy that will go stale again next release.
+
 ## [0.0.3] - 2026-07-04
 
 ### Fixed

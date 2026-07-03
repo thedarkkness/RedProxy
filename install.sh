@@ -5,7 +5,13 @@ set -euo pipefail
 
 REPO_URL="https://github.com/thedarkkness/RedProxy.git"
 INSTALL_DIR="/opt/redproxy"
-VERSION="0.0.1"
+
+# Single source of truth for the version is the VERSION file in the repo
+# (read by menu.sh etc. after cloning). install.sh runs before anything is
+# cloned, so it fetches the same file remotely instead of hardcoding a
+# copy that's guaranteed to go stale after the next release.
+VERSION=$(curl -fsSL "https://raw.githubusercontent.com/thedarkkness/RedProxy/main/VERSION" 2>/dev/null | tr -d '[:space:]')
+[[ -n "$VERSION" ]] || VERSION="dev"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 info() { echo -e "${BLUE}[i]${NC} $*"; }

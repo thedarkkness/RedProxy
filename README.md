@@ -66,7 +66,7 @@ redproxy restart         # restart the xray service
 
 ```
 ════════════════════════════════════════════════════
- RedProxy v0.0.1
+ RedProxy v0.0.4
 ════════════════════════════════════════════════════
   1) Add Client
   2) Delete Client
