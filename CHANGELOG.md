@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.2] - 2026-07-04
+
+### Fixed
+- **Critical:** `xray x25519` output parsing broke on Xray-core v25.3+ (labels changed from `Private key:`/`Public key:` to `PrivateKey:`/`Password:`), which silently produced an empty Reality private/public keypair — the server would come up but every client connection failed. `reality_install` now parses key:value pairs field-by-field and matches both the old and new label formats, and aborts loudly instead of writing an empty key if parsing ever fails again.
+- `redproxy`'s interactive menu exited back to the shell after a single action instead of redisplaying — it now loops until you choose "Exit".
+- Client card labels (Protocol/Server/Port/...) could misalign in Russian on servers without a UTF-8 locale, because `printf %-10s` pads by byte count; switched to unpadded "Label: value" lines.
+
 ## [0.0.1] - 2026-07-04
 
 ### Added

@@ -16,6 +16,22 @@ source "$INSTALL_DIR/utils/colors.sh"
 source "$INSTALL_DIR/utils/common.sh"
 load_lang
 
+# Parses `xray x25519` key:value output regardless of field-name spacing or
+# casing. Xray-core renamed "Private key:" / "Public key:" to "PrivateKey:" /
+# "Password:" around v25.3+ (the value is the same, only the label changed),
+# so this matches both the old and the new format.
+reality_parse_key() {
+    local raw="$1" field="$2" k v nk
+    while IFS=':' read -r k v; do
+        [[ -z "$k" ]] && continue
+        nk=$(echo "$k" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+        if [[ "$nk" == "$field" ]]; then
+            echo "$v" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+            return 0
+        fi
+    done <<< "$raw"
+}
+
 reality_install() {
     local port="${1:-443}"
     local sni="${2:-www.microsoft.com}"
@@ -25,8 +41,15 @@ reality_install() {
     info "$(m "Generating Reality X25519 keypair..." "Генерирую пару ключей X25519 для Reality...")"
     local keys priv pub
     keys=$("$XRAY_BIN" x25519)
-    priv=$(echo "$keys" | awk '/Private key:/ {print $3}')
-    pub=$(echo "$keys" | awk '/Public key:/ {print $3}')
+    priv=$(reality_parse_key "$keys" "privatekey")
+    pub=$(reality_parse_key "$keys" "publickey")
+    [[ -z "$pub" ]] && pub=$(reality_parse_key "$keys" "password")
+
+    if [[ -z "$priv" || -z "$pub" ]]; then
+        err "$(m "Could not parse 'xray x25519' output — aborting so the server isn't left with an empty key." "Не удалось разобрать вывод 'xray x25519' — прерываю установку, чтобы не оставить сервер с пустым ключом.")"
+        echo "$keys" >&2
+        return 1
+    fi
 
     local short_id dest
     short_id=$(gen_short_id)
@@ -134,14 +157,17 @@ print_client_card() {
     line
     echo -e " ${BOLD}$(m "RedProxy Client" "Клиент RedProxy"): ${name}${NC}"
     line
-    printf " %-10s: %s\n" "$(m "Protocol" "Протокол")" "VLESS + Reality"
-    printf " %-10s: %s\n" "$(m "Server" "Сервер")" "$ip"
-    printf " %-10s: %s\n" "$(m "Port" "Порт")" "$port"
-    printf " %-10s: %s\n" "UUID" "$uuid"
-    printf " %-10s: %s\n" "Flow" "xtls-rprx-vision"
-    printf " %-10s: %s\n" "SNI" "$sni"
-    printf " %-10s: %s\n" "PublicKey" "$pub"
-    printf " %-10s: %s\n" "ShortId" "$sid"
+    # Plain "Label: value" (no column padding) — printf's %-Ns pads by byte
+    # count, which misaligns Cyrillic labels on servers without a UTF-8
+    # locale (common on minimal Debian installs).
+    printf " %s: %s\n" "$(m "Protocol" "Протокол")" "VLESS + Reality"
+    printf " %s: %s\n" "$(m "Server" "Сервер")" "$ip"
+    printf " %s: %s\n" "$(m "Port" "Порт")" "$port"
+    printf " %s: %s\n" "UUID" "$uuid"
+    printf " %s: %s\n" "Flow" "xtls-rprx-vision"
+    printf " %s: %s\n" "SNI" "$sni"
+    printf " %s: %s\n" "PublicKey" "$pub"
+    printf " %s: %s\n" "ShortId" "$sid"
     line
     echo "$link"
     line
