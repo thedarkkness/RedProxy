@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.3] - 2026-07-04
+
+### Fixed
+- The 0.0.2 fix for `xray x25519` parsing still missed a third label variant actually in use on current Xray-core: `Password (PublicKey): xxx`. Matching is now substring-based on a normalized label (spaces and parentheses stripped) instead of an exact match, so it survives label wording changes like this one instead of needing a patch release each time.
+
 ## [0.0.2] - 2026-07-04
 
 ### Fixed

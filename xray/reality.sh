@@ -16,16 +16,18 @@ source "$INSTALL_DIR/utils/colors.sh"
 source "$INSTALL_DIR/utils/common.sh"
 load_lang
 
-# Parses `xray x25519` key:value output regardless of field-name spacing or
-# casing. Xray-core renamed "Private key:" / "Public key:" to "PrivateKey:" /
-# "Password:" around v25.3+ (the value is the same, only the label changed),
-# so this matches both the old and the new format.
+# Parses `xray x25519` key:value output regardless of field-name wording.
+# Xray-core has used at least three label styles for the same values:
+#   "Private key: xxx"          / "Public key: xxx"           (old)
+#   "PrivateKey: xxx"           / "Password: xxx"              (v25.3+)
+#   "PrivateKey: xxx"           / "Password (PublicKey): xxx"  (v26+)
+# so this matches on a normalized substring rather than an exact label.
 reality_parse_key() {
     local raw="$1" field="$2" k v nk
     while IFS=':' read -r k v; do
         [[ -z "$k" ]] && continue
-        nk=$(echo "$k" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
-        if [[ "$nk" == "$field" ]]; then
+        nk=$(echo "$k" | tr -d '[:space:]()' | tr '[:upper:]' '[:lower:]')
+        if [[ "$nk" == *"$field"* ]]; then
             echo "$v" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
             return 0
         fi
