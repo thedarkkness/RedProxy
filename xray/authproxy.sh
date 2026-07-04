@@ -66,9 +66,14 @@ authproxy_install() {
 # authproxy_add_client <xray_protocol> <tag> <prefix> [name]
 authproxy_add_client() {
     local xproto="$1" tag="$2" prefix="$3" name="${4:-}"
-    [[ -n "$name" ]] || { read -rp "$(m "Client name: " "Имя клиента: ")" name; }
+    [[ -n "$name" ]] || { read -rp "$(m "Client name (leave empty for a random one): " "Имя клиента (оставьте пустым для случайного): ")" name; }
     inbound_installed "$tag" || { err "$(m "This proxy is not installed yet. Run the installer first." "Этот прокси ещё не установлен. Сначала запустите установщик.")"; return 1; }
-    [[ -f "$CLIENTS_DIR/${prefix}-${name}.json" ]] && { err "$(m "Client '$name' already exists" "Клиент '$name' уже существует")"; return 1; }
+    if [[ -z "$name" ]]; then
+        name=$(gen_unique_client_name "$prefix")
+    elif [[ -f "$CLIENTS_DIR/${prefix}-${name}.json" ]]; then
+        err "$(m "Client '$name' already exists" "Клиент '$name' уже существует")"
+        return 1
+    fi
 
     local user pass port ip scheme link
     user="$name"

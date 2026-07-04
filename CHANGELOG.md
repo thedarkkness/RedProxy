@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.2] - 2026-07-04
+
+### Added
+- Adding a client with an empty name (just press Enter at the "Client name" prompt) now generates a random one — `user` + 6 random mixed-case letters/digits, e.g. `user4vL2m0` — instead of failing. Works the same way across Reality, SOCKS5 and HTTP.
+
 ## [0.1.1] - 2026-07-04
 
 ### Fixed

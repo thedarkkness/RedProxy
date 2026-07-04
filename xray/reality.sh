@@ -102,9 +102,14 @@ reality_install() {
 
 reality_add_client() {
     local name="${1:-}"
-    [[ -n "$name" ]] || { read -rp "$(m "Client name: " "Имя клиента: ")" name; }
+    [[ -n "$name" ]] || { read -rp "$(m "Client name (leave empty for a random one): " "Имя клиента (оставьте пустым для случайного): ")" name; }
     inbound_installed "$REALITY_TAG" || { err "$(m "Reality is not installed yet. Run the installer first." "Reality ещё не установлен. Сначала запустите установщик.")"; return 1; }
-    [[ -f "$CLIENTS_DIR/${REALITY_PREFIX}-${name}.json" ]] && { err "$(m "Client '$name' already exists" "Клиент '$name' уже существует")"; return 1; }
+    if [[ -z "$name" ]]; then
+        name=$(gen_unique_client_name "$REALITY_PREFIX")
+    elif [[ -f "$CLIENTS_DIR/${REALITY_PREFIX}-${name}.json" ]]; then
+        err "$(m "Client '$name' already exists" "Клиент '$name' уже существует")"
+        return 1
+    fi
 
     local uuid
     uuid=$("$XRAY_BIN" uuid)

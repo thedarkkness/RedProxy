@@ -22,6 +22,18 @@ gen_short_id() {
     openssl rand -hex 8
 }
 
+# "user" + 6 random mixed-case letters/digits (e.g. "user4vL2m0"), used
+# when someone adds a client without typing a name. Retries on the
+# (astronomically unlikely) chance the random suffix collides with an
+# existing client file for this protocol.
+gen_unique_client_name() {
+    local prefix="$1" name
+    while true; do
+        name="user$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom 2>/dev/null | head -c 6)"
+        [[ -f "$CLIENTS_DIR/${prefix}-${name}.json" ]] || { echo "$name"; return 0; }
+    done
+}
+
 public_ip() {
     curl -fsSL4 --max-time 5 https://api.ipify.org 2>/dev/null \
         || curl -fsSL4 --max-time 5 https://ifconfig.me 2>/dev/null \
