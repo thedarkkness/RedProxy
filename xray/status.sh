@@ -2,8 +2,8 @@
 # Live traffic status, roughly analogous to `wg show`. TCP-based proxies
 # (VLESS/SOCKS5/HTTP) don't have WireGuard's periodic-handshake concept,
 # so "is it alive" is shown instead as: the systemd service state, plus a
-# per-client/per-protocol traffic counter that's marked active (●) when it
-# has moved up since the last refresh a couple of seconds ago.
+# traffic counter for the one client/protocol you pick that's marked
+# active (●) when it's moved since the last refresh a couple seconds ago.
 #
 # Uses Xray's built-in Stats API (a loopback-only dokodemo-door inbound +
 # the stats/policy config blocks) rather than anything invented — see
@@ -50,6 +50,7 @@ ensure_stats_enabled() {
     ' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
 
     systemctl restart redproxy-xray
+    sleep 1
     ok "$(m "Traffic stats enabled" "Статистика трафика включена")"
 }
 
@@ -62,81 +63,112 @@ human_bytes() {
     }'
 }
 
+# Coerces anything that isn't a plain non-negative integer (empty output,
+# "null", a stray error message from the API) to "0" — arithmetic tests
+# like `-gt` try to evaluate a non-numeric string as a variable name
+# under `set -u`, which crashes instead of comparing.
+to_int() {
+    [[ "$1" =~ ^[0-9]+$ ]] && echo "$1" || echo "0"
+}
+
 stats_query() {
     "$XRAY_BIN" api statsquery --server="$STATS_API" 2>/dev/null || echo '{"stat":[]}'
 }
 
 stat_value() {
     # stat_value <json> <exact stat name>
-    echo "$1" | jq -r --arg n "$2" '(.stat // [])[] | select(.name == $n) | .value' 2>/dev/null | head -1
+    echo "$1" | jq -r --arg n "$2" '(.stat // [])[]? | select(.name == $n) | .value' 2>/dev/null | head -1
+}
+
+# Tab-separated "kind<TAB>id<TAB>label" for every trackable target: one
+# row per Reality client, plus one aggregate row each for SOCKS5/HTTP
+# (Xray doesn't reliably expose per-account stats for those, only
+# per-inbound totals, so that's the most specific thing we can offer).
+list_status_targets() {
+    local f name
+    if inbound_installed "$REALITY_TAG"; then
+        for f in "$CLIENTS_DIR/${REALITY_PREFIX}-"*.json; do
+            [[ -e "$f" ]] || continue
+            name=$(jq -r '.name' "$f")
+            printf 'reality\t%s\tVLESS+Reality — %s\n' "$name" "$name"
+        done
+    fi
+    if inbound_installed "$SOCKS5_TAG"; then
+        printf 'socks5\tall\tSOCKS5 (%s)\n' "$(m "all clients" "все клиенты")"
+    fi
+    if inbound_installed "$HTTP_TAG"; then
+        printf 'http\tall\tHTTP (%s)\n' "$(m "all clients" "все клиенты")"
+    fi
+}
+
+# Prints one "kind<TAB>id<TAB>label" row: the only target, or an
+# interactively-chosen one if there's more than one. Empty output (with a
+# printed error) if nothing is installed yet.
+pick_status_target() {
+    local rows count
+    rows=$(list_status_targets)
+    if [[ -z "$rows" ]]; then
+        err "$(m "No protocol installed yet. Run install.sh again to add one." "Протокол ещё не установлен. Запустите install.sh снова, чтобы добавить.")"
+        return 1
+    fi
+
+    count=$(echo "$rows" | wc -l)
+    if [[ "$count" -eq 1 ]]; then
+        echo "$rows"
+        return 0
+    fi
+
+    echo "$(m "Which client/config do you want to watch?" "За каким клиентом/конфигом следить?")" >&2
+    local i=1 label
+    while IFS=$'\t' read -r _ _ label; do
+        echo "  $i) $label" >&2
+        i=$((i+1))
+    done <<< "$rows"
+    local sel
+    echo -n "> " >&2
+    read -r sel
+    echo "$rows" | sed -n "${sel}p"
 }
 
 redproxy_status() {
     ensure_stats_enabled || return 1
 
-    local -A prev
+    local row kind id label
+    row=$(pick_status_target) || return 1
+    [[ -n "$row" ]] || return 1
+    IFS=$'\t' read -r kind id label <<< "$row"
+
+    local stat_down stat_up
+    case "$kind" in
+        reality) stat_down="user>>>${id}>>>traffic>>>downlink";       stat_up="user>>>${id}>>>traffic>>>uplink" ;;
+        socks5)  stat_down="inbound>>>${SOCKS5_TAG}>>>traffic>>>downlink"; stat_up="inbound>>>${SOCKS5_TAG}>>>traffic>>>uplink" ;;
+        http)    stat_down="inbound>>>${HTTP_TAG}>>>traffic>>>downlink";   stat_up="inbound>>>${HTTP_TAG}>>>traffic>>>uplink" ;;
+    esac
+
     echo "$(m "Auto-refreshing — press any key to go back to the menu." "Автообновление — нажмите любую клавишу для возврата в меню.")"
 
+    local prev_down=0 prev_up=0
     while true; do
         clear
-        local svc_state
+        local svc_state json down up mark
         svc_state=$(systemctl is-active redproxy-xray 2>/dev/null || echo "unknown")
+        json=$(stats_query)
+        down=$(to_int "$(stat_value "$json" "$stat_down")")
+        up=$(to_int "$(stat_value "$json" "$stat_up")")
+        mark=" "
+        [[ "$down" -gt "$prev_down" || "$up" -gt "$prev_up" ]] && mark="${GREEN}●${NC}"
 
         line
         echo -e " ${BOLD}$(m "RedProxy — Live Status" "RedProxy — статус в реальном времени")${NC}"
         line
         printf " %s: %s\n" "$(m "Service" "Сервис")" "$svc_state"
+        printf " %s: %s\n" "$(m "Watching" "Отслеживается")" "$label"
         line
-
-        local json any=0
-        json=$(stats_query)
-
-        if inbound_installed "$REALITY_TAG"; then
-            any=1
-            echo "-- VLESS+Reality --"
-            local f name down up dkey ukey mark
-            for f in "$CLIENTS_DIR/${REALITY_PREFIX}-"*.json; do
-                [[ -e "$f" ]] || continue
-                name=$(jq -r '.name' "$f")
-                down=$(stat_value "$json" "user>>>${name}>>>traffic>>>downlink"); down=${down:-0}
-                up=$(stat_value "$json" "user>>>${name}>>>traffic>>>uplink"); up=${up:-0}
-                dkey="r_${name}_d"; ukey="r_${name}_u"
-                mark=" "
-                [[ "${down}" -gt "${prev[$dkey]:-0}" || "${up}" -gt "${prev[$ukey]:-0}" ]] && mark="${GREEN}●${NC}"
-                printf "  %b %-16s ↓ %-10s ↑ %-10s\n" "$mark" "$name" "$(human_bytes "$down")" "$(human_bytes "$up")"
-                prev[$dkey]=$down; prev[$ukey]=$up
-            done
-        fi
-
-        if inbound_installed "$SOCKS5_TAG"; then
-            any=1
-            echo "-- SOCKS5 --"
-            local down up mark
-            down=$(stat_value "$json" "inbound>>>${SOCKS5_TAG}>>>traffic>>>downlink"); down=${down:-0}
-            up=$(stat_value "$json" "inbound>>>${SOCKS5_TAG}>>>traffic>>>uplink"); up=${up:-0}
-            mark=" "
-            [[ "${down}" -gt "${prev[s_d]:-0}" || "${up}" -gt "${prev[s_u]:-0}" ]] && mark="${GREEN}●${NC}"
-            printf "  %b %-16s ↓ %-10s ↑ %-10s\n" "$mark" "$(m "all clients" "все клиенты")" "$(human_bytes "$down")" "$(human_bytes "$up")"
-            prev[s_d]=$down; prev[s_u]=$up
-        fi
-
-        if inbound_installed "$HTTP_TAG"; then
-            any=1
-            echo "-- HTTP --"
-            local down up mark
-            down=$(stat_value "$json" "inbound>>>${HTTP_TAG}>>>traffic>>>downlink"); down=${down:-0}
-            up=$(stat_value "$json" "inbound>>>${HTTP_TAG}>>>traffic>>>uplink"); up=${up:-0}
-            mark=" "
-            [[ "${down}" -gt "${prev[h_d]:-0}" || "${up}" -gt "${prev[h_u]:-0}" ]] && mark="${GREEN}●${NC}"
-            printf "  %b %-16s ↓ %-10s ↑ %-10s\n" "$mark" "$(m "all clients" "все клиенты")" "$(human_bytes "$down")" "$(human_bytes "$up")"
-            prev[h_d]=$down; prev[h_u]=$up
-        fi
-
-        [[ $any -eq 1 ]] || warn "$(m "No protocol installed yet." "Протокол ещё не установлен.")"
-
+        printf "  %b ↓ %-10s ↑ %-10s\n" "$mark" "$(human_bytes "$down")" "$(human_bytes "$up")"
         line
         echo "$(m "● = traffic moved since last refresh. Press any key to go back." "● = трафик изменился с прошлого обновления. Нажмите любую клавишу для возврата.")"
 
+        prev_down=$down; prev_up=$up
         if read -rsn1 -t 2 _; then
             break
         fi

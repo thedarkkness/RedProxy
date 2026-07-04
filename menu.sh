@@ -94,10 +94,18 @@ check_for_updates() {
         warn "$(m "Could not check for updates (network error)" "Не удалось проверить обновления (ошибка сети)")"
         return 1
     fi
+
     if [[ "$remote" == "$VERSION" ]]; then
-        ok "$(m "You're up to date (v${VERSION})" "У вас последняя версия (v${VERSION})")"
+        ok "$(m "You already have the latest version (v${VERSION})" "У вас уже установлена актуальная версия (v${VERSION})")"
+        return 0
+    fi
+
+    local ans
+    read -rp "$(m "New version available: v${remote} (you have v${VERSION}). Update now? [Y/n] " "Доступна новая версия: v${remote} (у вас v${VERSION}). Обновиться сейчас? [Y/n] ")" ans
+    if [[ -z "$ans" || "$ans" =~ ^[Yy]$ ]]; then
+        bash "$INSTALL_DIR/update.sh"
     else
-        warn "$(m "New version available: v${remote} (you have v${VERSION}). Choose 'Update' to install it." "Доступна новая версия: v${remote} (у вас v${VERSION}). Выберите 'Обновить', чтобы установить.")"
+        info "$(m "Skipped." "Пропущено.")"
     fi
 }
 
@@ -147,10 +155,9 @@ show_menu() {
         echo "  5) $(m "Live Status (traffic)" "Статус в реальном времени (трафик)")"
         echo "  6) $(m "Restart" "Перезапустить")"
         echo "  7) $(m "Check for Updates" "Проверить обновления")"
-        echo "  8) $(m "Update" "Обновить")"
-        echo "  9) $(m "Backup" "Резервная копия")"
-        echo " 10) $(m "Change Port" "Сменить порт")"
-        echo " 11) $(m "Change Language" "Сменить язык")"
+        echo "  8) $(m "Backup" "Резервная копия")"
+        echo "  9) $(m "Change Port" "Сменить порт")"
+        echo " 10) $(m "Change Language" "Сменить язык")"
         echo "  0) $(m "Exit" "Выход")"
         line
         read -rp "$(m "Select: " "Выбор: ")" opt
@@ -162,10 +169,9 @@ show_menu() {
             5) redproxy_status ;;
             6) systemctl restart redproxy-xray && ok "$(m "Restarted" "Перезапущено")" ;;
             7) check_for_updates ;;
-            8) bash "$INSTALL_DIR/update.sh" ;;
-            9) bash "$INSTALL_DIR/utils/backup.sh" ;;
-            10) warn "$(m "Change Port is not implemented yet in v${VERSION}" "Смена порта пока не реализована в v${VERSION}")" ;;
-            11) change_language ;;
+            8) bash "$INSTALL_DIR/utils/backup.sh" ;;
+            9) warn "$(m "Change Port is not implemented yet in v${VERSION}" "Смена порта пока не реализована в v${VERSION}")" ;;
+            10) change_language ;;
             0) ok "$(m "Bye!" "Пока!")"; exit 0 ;;
             *) warn "$(m "Invalid option" "Неверный выбор")" ;;
         esac

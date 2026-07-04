@@ -161,50 +161,65 @@ read -rp "> " choice
 
 case "$choice" in
     1)
-        while true; do
-            read -rp "$(m "Port [443]: " "Порт [443]: ")" port; port=${port:-443}
-            if port_in_use "$port"; then
-                warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
-                port_owner "$port"
-                warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
-                continue
-            fi
-            break
-        done
-        read -rp "$(m "SNI to masquerade as [www.microsoft.com]: " "SNI для маскировки [www.microsoft.com]: ")" sni; sni=${sni:-www.microsoft.com}
         # shellcheck source=./xray/reality.sh
         source "$INSTALL_DIR/xray/reality.sh"
-        reality_install "$port" "$sni"
+        if inbound_installed "$REALITY_TAG"; then
+            info "$(m "VLESS+Reality is already installed — adding a new client instead." "VLESS+Reality уже установлен — добавляю нового клиента.")"
+            reality_add_client
+        else
+            while true; do
+                read -rp "$(m "Port [443]: " "Порт [443]: ")" port; port=${port:-443}
+                if port_in_use "$port"; then
+                    warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
+                    port_owner "$port"
+                    warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
+                    continue
+                fi
+                break
+            done
+            read -rp "$(m "SNI to masquerade as [www.microsoft.com]: " "SNI для маскировки [www.microsoft.com]: ")" sni; sni=${sni:-www.microsoft.com}
+            reality_install "$port" "$sni"
+        fi
         ;;
     2)
-        while true; do
-            read -rp "$(m "Port [1080]: " "Порт [1080]: ")" port; port=${port:-1080}
-            if port_in_use "$port"; then
-                warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
-                port_owner "$port"
-                warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
-                continue
-            fi
-            break
-        done
         # shellcheck source=./xray/socks5.sh
         source "$INSTALL_DIR/xray/socks5.sh"
-        socks5_install "$port"
+        if inbound_installed "$SOCKS5_TAG"; then
+            info "$(m "SOCKS5 is already installed — adding a new client instead." "SOCKS5 уже установлен — добавляю нового клиента.")"
+            socks5_add_client
+        else
+            while true; do
+                read -rp "$(m "Port [1080]: " "Порт [1080]: ")" port; port=${port:-1080}
+                if port_in_use "$port"; then
+                    warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
+                    port_owner "$port"
+                    warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
+                    continue
+                fi
+                break
+            done
+            socks5_install "$port"
+        fi
         ;;
     3)
-        while true; do
-            read -rp "$(m "Port [8080]: " "Порт [8080]: ")" port; port=${port:-8080}
-            if port_in_use "$port"; then
-                warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
-                port_owner "$port"
-                warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
-                continue
-            fi
-            break
-        done
         # shellcheck source=./xray/http.sh
         source "$INSTALL_DIR/xray/http.sh"
-        http_install "$port"
+        if inbound_installed "$HTTP_TAG"; then
+            info "$(m "HTTP proxy is already installed — adding a new client instead." "HTTP-прокси уже установлен — добавляю нового клиента.")"
+            http_add_client
+        else
+            while true; do
+                read -rp "$(m "Port [8080]: " "Порт [8080]: ")" port; port=${port:-8080}
+                if port_in_use "$port"; then
+                    warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
+                    port_owner "$port"
+                    warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
+                    continue
+                fi
+                break
+            done
+            http_install "$port"
+        fi
         ;;
     *)
         warn "$(m "That protocol isn't implemented yet in v${VERSION}." "Этот протокол пока не реализован в v${VERSION}.")"

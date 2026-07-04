@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.1] - 2026-07-04
+
+### Fixed
+- **Critical:** `redproxy status` crashed (`null: unbound variable`) whenever Xray's Stats API returned a non-numeric value (e.g. `null`) for a counter — `[[ ... -gt ... ]]` evaluates its operands arithmetically, and a bare word like `null` gets treated as a variable reference under `set -u` instead of a comparison. All stat values are now coerced through a `to_int()` guard (anything that isn't a plain non-negative integer becomes `0`) before any arithmetic is done on them.
+
+### Added
+- `redproxy status` now asks which client or protocol to watch (one client for Reality, "all clients" for SOCKS5/HTTP) instead of dumping every installed protocol's traffic on one screen — auto-picks the only target if there's just one.
+- `install.sh`: choosing a protocol that's already installed no longer errors and tells you to run `redproxy add` separately — it now prompts for a client name and adds one right there.
+- `redproxy check-update` (menu option 7) now does the whole job: if a newer version exists it asks `Update now? [Y/n]` and runs the update itself; if you're already current it says so directly. The separate "Update" menu item is gone (the `redproxy update` CLI command still exists for scripting/non-interactive use).
+
 ## [0.1.0] - 2026-07-04
 
 ### Added

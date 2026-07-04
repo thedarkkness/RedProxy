@@ -103,16 +103,15 @@ redproxy remove alice  # remove a client
 redproxy list          # list clients (all installed protocols)
 redproxy qr alice      # reprint link + QR
 redproxy status        # live traffic view (see below)
-redproxy check-update   # check if a newer RedProxy version exists
-redproxy update          # git pull + refresh Xray-core
-redproxy backup            # tar.gz of configs + clients
-redproxy restart             # restart the xray service
+redproxy check-update   # check for a newer version, offers to install it (Y/n)
+redproxy backup           # tar.gz of configs + clients
+redproxy restart            # restart the xray service
 redproxy lang                  # switch English / Русский
 ```
 
 ```
 ════════════════════════════════════════════════════
- RedProxy v0.0.9
+ RedProxy v0.1.1
 ════════════════════════════════════════════════════
   1) Add Client
   2) Delete Client
@@ -121,41 +120,51 @@ redproxy lang                  # switch English / Русский
   5) Live Status (traffic)
   6) Restart
   7) Check for Updates
-  8) Update
-  9) Backup
- 10) Change Port
- 11) Change Language
+  8) Backup
+  9) Change Port
+ 10) Change Language
   0) Exit
 ════════════════════════════════════════════════════
 ```
 
-"Check for Updates" just compares your version against the repo's
-`VERSION` file and tells you if a newer release exists — "Update" is the
-one that actually pulls it and restarts Xray.
+"Check for Updates" compares your version against the repo's `VERSION`
+file; if a newer one exists it asks `Update now? [Y/n]` right there
+before pulling it, and if you're already current it just says so.
+
+Running `install.sh` again on a server that already has RedProxy asks
+the same kind of question up front: manage what's already there, or
+install another protocol. Picking an already-installed protocol adds a
+new client straight away instead of erroring and pointing you at a
+separate command.
 
 ### Live status
 
-`redproxy status` (or menu option 5) shows whether `redproxy-xray` is
-running and, per installed protocol, how much traffic has moved — a
-per-client breakdown for Reality, combined totals for SOCKS5/HTTP — via
-Xray's own [Stats API](https://xtls.github.io/en/document/level-2/traffic_stats.html)
+`redproxy status` (or menu option 5) asks which client or protocol you
+want to watch — pick one client for Reality, or "all clients" for
+SOCKS5/HTTP, since Xray doesn't expose reliable per-account stats for
+those, only per-inbound totals. It then shows whether `redproxy-xray` is
+running and how much traffic that target has moved, via Xray's own
+[Stats API](https://xtls.github.io/en/document/level-2/traffic_stats.html)
 (a loopback-only inbound, enabled automatically the first time you check
-status). It auto-refreshes every couple of seconds and marks a row `●`
-when its traffic counter has moved since the last refresh. TCP-based
-proxies don't have WireGuard's periodic-handshake concept, so this is the
+status). Auto-refreshes every couple of seconds and marks the row `●`
+when the counter has moved since the last refresh. TCP-based proxies
+don't have WireGuard's periodic-handshake concept, so this is the
 closest honest equivalent to "is there a live connection right now" —
 press any key to go back to the menu.
 
 ```
+Which client/config do you want to watch?
+  1) VLESS+Reality — client1
+  2) SOCKS5 (all clients)
+> 1
+
 ════════════════════════════════════════════════════
  RedProxy — Live Status
 ════════════════════════════════════════════════════
  Service: active
+ Watching: VLESS+Reality — client1
 ════════════════════════════════════════════════════
--- VLESS+Reality --
-  ● client1           ↓ 128.4 MB  ↑ 12.1 MB
--- SOCKS5 --
-    all clients       ↓ 4.2 MB    ↑ 0.9 MB
+  ● ↓ 128.4 MB  ↑ 12.1 MB
 ════════════════════════════════════════════════════
 ● = traffic moved since last refresh. Press any key to go back.
 ```
