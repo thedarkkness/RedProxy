@@ -1,6 +1,9 @@
 # Changelog
 
-## [0.0.6] - 2026-07-04
+## [0.0.7] - 2026-07-04
+
+### Fixed
+- **Critical:** the 0.0.6 fix that made `install.sh` `git pull` in place instead of re-cloning immediately broke on Linux servers: this repo is developed on Windows, where git doesn't track the executable bit at all, so every script got committed as non-executable (`100644`). `install.sh`'s own `chmod +x` then looked like an uncommitted local edit to git on Linux (`core.fileMode` defaults to true there), and `git pull` refused with "Your local changes ... would be overwritten by merge" the moment any of those files also changed upstream. `install.sh`/`update.sh` now set `core.fileMode false` on the managed checkout before pulling, and every `.sh` file is now committed with the executable bit set directly in the index so this class of bug can't recur.
 
 ### Added
 - **SOCKS5 and HTTP proxy support** (username/password auth), installable as options 2 and 3 in `install.sh` alongside VLESS+Reality. Meant for plain proxy use — Telegram/WhatsApp proxy settings, browser/curl proxy config, or commercial proxy resale — rather than censorship circumvention: no TLS camouflage, just a fast authenticated relay. Client cards print a `socks5://`/`http://` link, a QR code, and a plain `host:port:user:pass` line for apps that want the fields typed in separately. Shared install/add/remove/list/qr logic lives in `xray/authproxy.sh`; `xray/socks5.sh` and `xray/http.sh` are thin wrappers over it.
