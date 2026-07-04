@@ -19,7 +19,7 @@ info "$(m "Pulling latest RedProxy scripts..." "Загружаю последн�
 # See install.sh for why: scripts are committed without the executable
 # bit, so chmod +x below looks like a local edit to git on Linux and
 # blocks the pull unless file-mode diffs are ignored on this checkout.
-git config -C "$INSTALL_DIR" core.fileMode false
+git -C "$INSTALL_DIR" config core.fileMode false
 git -C "$INSTALL_DIR" pull --quiet
 chmod +x "$INSTALL_DIR"/*.sh "$INSTALL_DIR"/xray/*.sh "$INSTALL_DIR"/wireguard/*.sh "$INSTALL_DIR"/utils/*.sh
 

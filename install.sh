@@ -81,13 +81,13 @@ if [[ -d "$INSTALL_DIR/.git" ]]; then
     # (core.fileMode defaults to true there), and `git pull` refuses to
     # overwrite files it thinks have uncommitted changes. Telling git to
     # ignore file-mode diffs on this checkout fixes that permanently.
-    git config -C "$INSTALL_DIR" core.fileMode false
+    git -C "$INSTALL_DIR" config core.fileMode false
     git -C "$INSTALL_DIR" pull --quiet
 else
     info "$(m "Fetching RedProxy v${VERSION}..." "Загружаю RedProxy v${VERSION}...")"
     rm -rf "$INSTALL_DIR"
     git clone --quiet --depth 1 "$REPO_URL" "$INSTALL_DIR"
-    git config -C "$INSTALL_DIR" core.fileMode false
+    git -C "$INSTALL_DIR" config core.fileMode false
 fi
 chmod +x "$INSTALL_DIR"/*.sh "$INSTALL_DIR"/xray/*.sh "$INSTALL_DIR"/wireguard/*.sh "$INSTALL_DIR"/utils/*.sh
 echo "$RP_LANG" > "$INSTALL_DIR/lang"

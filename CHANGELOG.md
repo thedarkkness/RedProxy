@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.8] - 2026-07-04
+
+### Fixed
+- The 0.0.7 fix itself had a typo: `git config -C "$INSTALL_DIR" core.fileMode false` puts the `-C` flag on the wrong side of the subcommand (`-C` is a global git option and must come *before* `config`, not after). Git rejected it with "unknown switch `C'" and printed `git config`'s usage instead of ever running `git pull` — install.sh aborted on this line for everyone. Corrected to `git -C "$INSTALL_DIR" config core.fileMode false` in both `install.sh` and `update.sh`.
+
 ## [0.0.7] - 2026-07-04
 
 ### Fixed
