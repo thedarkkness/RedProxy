@@ -59,6 +59,8 @@ reality_install() {
         return 1
     fi
 
+    open_firewall_port "$port"
+
     info "$(m "Generating Reality X25519 keypair..." "Генерирую пару ключей X25519 для Reality...")"
     local keys priv pub
     keys=$("$XRAY_BIN" x25519)

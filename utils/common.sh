@@ -49,6 +49,25 @@ port_owner() {
     fi
 }
 
+# Opens <port>/tcp (and /udp too when $2 is "true") in whichever firewall
+# is active. install.sh's own pass only opens 443/tcp + SSH up front
+# (the Reality default) before any port is actually chosen — this covers
+# whatever port a protocol ends up using, including a custom Reality port
+# or SOCKS5/HTTP, so a client isn't left unable to reach a service that's
+# listening just fine locally.
+open_firewall_port() {
+    local port="$1" udp="${2:-false}"
+    if command -v ufw >/dev/null 2>&1; then
+        ufw allow "${port}/tcp" >/dev/null 2>&1 || true
+        [[ "$udp" == "true" ]] && { ufw allow "${port}/udp" >/dev/null 2>&1 || true; }
+        ufw reload >/dev/null 2>&1 || true
+    elif command -v firewall-cmd >/dev/null 2>&1; then
+        firewall-cmd --permanent --add-port="${port}/tcp" >/dev/null 2>&1 || true
+        [[ "$udp" == "true" ]] && { firewall-cmd --permanent --add-port="${port}/udp" >/dev/null 2>&1 || true; }
+        firewall-cmd --reload >/dev/null 2>&1 || true
+    fi
+}
+
 # Xray's config.json holds one inbound array shared by every installed
 # protocol (Reality, SOCKS5, HTTP, ...), each tagged so it can be found and
 # edited independently. This creates the empty skeleton once; each

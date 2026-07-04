@@ -22,6 +22,8 @@ source "$INSTALL_DIR/xray/reality.sh"
 source "$INSTALL_DIR/xray/socks5.sh"
 # shellcheck source=./xray/http.sh
 source "$INSTALL_DIR/xray/http.sh"
+# shellcheck source=./xray/status.sh
+source "$INSTALL_DIR/xray/status.sh"
 load_lang
 
 VERSION=$(cat "$INSTALL_DIR/VERSION" 2>/dev/null || echo "0.0.1")
@@ -115,10 +117,11 @@ show_menu() {
         echo "  2) $(m "Delete Client" "Удалить клиента")"
         echo "  3) $(m "List Clients" "Список клиентов")"
         echo "  4) $(m "Show QR" "Показать QR")"
-        echo "  5) $(m "Restart" "Перезапустить")"
-        echo "  6) $(m "Update" "Обновить")"
-        echo "  7) $(m "Backup" "Резервная копия")"
-        echo "  8) $(m "Change Port" "Сменить порт")"
+        echo "  5) $(m "Live Status (traffic)" "Статус в реальном времени (трафик)")"
+        echo "  6) $(m "Restart" "Перезапустить")"
+        echo "  7) $(m "Update" "Обновить")"
+        echo "  8) $(m "Backup" "Резервная копия")"
+        echo "  9) $(m "Change Port" "Сменить порт")"
         echo "  0) $(m "Exit" "Выход")"
         line
         read -rp "$(m "Select: " "Выбор: ")" opt
@@ -127,15 +130,20 @@ show_menu() {
             2) dispatch remove ;;
             3) list_all_clients ;;
             4) dispatch qr ;;
-            5) systemctl restart redproxy-xray && ok "$(m "Restarted" "Перезапущено")" ;;
-            6) bash "$INSTALL_DIR/update.sh" ;;
-            7) bash "$INSTALL_DIR/utils/backup.sh" ;;
-            8) warn "$(m "Change Port is not implemented yet in v${VERSION}" "Смена порта пока не реализована в v${VERSION}")" ;;
-            0) exit 0 ;;
+            5) redproxy_status ;;
+            6) systemctl restart redproxy-xray && ok "$(m "Restarted" "Перезапущено")" ;;
+            7) bash "$INSTALL_DIR/update.sh" ;;
+            8) bash "$INSTALL_DIR/utils/backup.sh" ;;
+            9) warn "$(m "Change Port is not implemented yet in v${VERSION}" "Смена порта пока не реализована в v${VERSION}")" ;;
+            0) ok "$(m "Bye!" "Пока!")"; exit 0 ;;
             *) warn "$(m "Invalid option" "Неверный выбор")" ;;
         esac
-        echo
-        read -rp "$(m "Press Enter to continue..." "Нажмите Enter для продолжения...")" _
+        # redproxy_status already blocks on its own "press any key" gate,
+        # so don't make the user confirm twice to get back to the menu.
+        if [[ "$opt" != "5" ]]; then
+            echo
+            read -rp "$(m "Press Enter to continue..." "Нажмите Enter для продолжения...")" _
+        fi
     done
 }
 
@@ -145,6 +153,7 @@ case "$cmd" in
     remove|rm|delete)  shift; dispatch remove "${1:-}" ;;
     list|ls)           list_all_clients ;;
     qr)                shift; dispatch qr "${1:-}" ;;
+    status)            redproxy_status ;;
     restart)           systemctl restart redproxy-xray && ok "$(m "Restarted" "Перезапущено")" ;;
     update)            bash "$INSTALL_DIR/update.sh" ;;
     backup)            bash "$INSTALL_DIR/utils/backup.sh" ;;

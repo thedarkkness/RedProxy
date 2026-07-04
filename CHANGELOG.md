@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.9] - 2026-07-04
+
+### Added
+- **Live traffic status** (`redproxy status`, or menu option 5): shows whether `redproxy-xray` is running, plus per-client traffic (Reality) and combined totals (SOCKS5/HTTP), auto-refreshing every ~2s with an active indicator (`●`) when a counter has moved since the last refresh. Backed by Xray's own Stats API (a loopback-only `dokodemo-door` inbound + `stats`/`policy`/`api` config blocks), enabled automatically — including retrofitted onto installs made before this existed — the first time status is checked. Press any key to return to the menu.
+- Exiting the interactive menu (option 0) now prints "Bye!" / "Пока!" instead of exiting silently.
+
+### Fixed
+- `install.sh` only ever opened port 443/tcp in the firewall, regardless of which port a protocol actually ended up using. SOCKS5 (1080), HTTP (8080), and any non-default Reality port were left unreachable from outside even though Xray was listening correctly — the service looked fully installed but nothing external could connect. `reality_install`/`authproxy_install` now open the actual chosen port (`ufw allow`/`firewall-cmd --add-port` + reload) right after confirming it's free.
+
 ## [0.0.8] - 2026-07-04
 
 ### Fixed

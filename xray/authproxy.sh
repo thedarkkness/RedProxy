@@ -38,6 +38,12 @@ authproxy_install() {
         return 1
     fi
 
+    if [[ "$xproto" == "socks" ]]; then
+        open_firewall_port "$port" true
+    else
+        open_firewall_port "$port"
+    fi
+
     local settings
     if [[ "$xproto" == "socks" ]]; then
         local ip; ip=$(public_ip)

@@ -99,25 +99,54 @@ redproxy add alice    # add a client
 redproxy remove alice # remove a client
 redproxy list         # list clients (all installed protocols)
 redproxy qr alice     # reprint link + QR
-redproxy backup        # tar.gz of configs + clients
-redproxy update         # git pull + refresh Xray-core
-redproxy restart         # restart the xray service
+redproxy status         # live traffic view (see below)
+redproxy backup           # tar.gz of configs + clients
+redproxy update             # git pull + refresh Xray-core
+redproxy restart              # restart the xray service
 ```
 
 ```
 ════════════════════════════════════════════════════
- RedProxy v0.0.6
+ RedProxy v0.0.9
 ════════════════════════════════════════════════════
   1) Add Client
   2) Delete Client
   3) List Clients
   4) Show QR
-  5) Restart
-  6) Update
-  7) Backup
-  8) Change Port
+  5) Live Status (traffic)
+  6) Restart
+  7) Update
+  8) Backup
+  9) Change Port
   0) Exit
 ════════════════════════════════════════════════════
+```
+
+### Live status
+
+`redproxy status` (or menu option 5) shows whether `redproxy-xray` is
+running and, per installed protocol, how much traffic has moved — a
+per-client breakdown for Reality, combined totals for SOCKS5/HTTP — via
+Xray's own [Stats API](https://xtls.github.io/en/document/level-2/traffic_stats.html)
+(a loopback-only inbound, enabled automatically the first time you check
+status). It auto-refreshes every couple of seconds and marks a row `●`
+when its traffic counter has moved since the last refresh. TCP-based
+proxies don't have WireGuard's periodic-handshake concept, so this is the
+closest honest equivalent to "is there a live connection right now" —
+press any key to go back to the menu.
+
+```
+════════════════════════════════════════════════════
+ RedProxy — Live Status
+════════════════════════════════════════════════════
+ Service: active
+════════════════════════════════════════════════════
+-- VLESS+Reality --
+  ● client1           ↓ 128.4 MB  ↑ 12.1 MB
+-- SOCKS5 --
+    all clients       ↓ 4.2 MB    ↑ 0.9 MB
+════════════════════════════════════════════════════
+● = traffic moved since last refresh. Press any key to go back.
 ```
 
 ## Supported protocols
@@ -152,6 +181,7 @@ RedProxy/
 │   ├── authproxy.sh                # shared SOCKS5/HTTP logic
 │   ├── socks5.sh                     # SOCKS5 proxy (fully implemented)
 │   ├── http.sh                         # HTTP proxy (fully implemented)
+│   ├── status.sh                         # Xray Stats API + `redproxy status` live view
 │   ├── vless.sh                          # VLESS + WS + TLS (stub)
 │   ├── vmess.sh                            # VMess (stub)
 │   ├── trojan.sh                             # Trojan (stub)
