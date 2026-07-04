@@ -49,6 +49,26 @@ port_owner() {
     fi
 }
 
+# Xray's config.json holds one inbound array shared by every installed
+# protocol (Reality, SOCKS5, HTTP, ...), each tagged so it can be found and
+# edited independently. This creates the empty skeleton once; each
+# protocol's *_install() then appends its own inbound instead of
+# overwriting the file, so installing a second protocol doesn't destroy
+# the first one's clients.
+ensure_config_skeleton() {
+    local cfg="$INSTALL_DIR/configs/config.json"
+    mkdir -p "$INSTALL_DIR/configs" "$INSTALL_DIR/clients"
+    if [[ ! -f "$cfg" ]]; then
+        jq -n '{log:{loglevel:"warning"}, inbounds: [], outbounds: [{protocol:"freedom",tag:"direct"},{protocol:"blackhole",tag:"block"}]}' > "$cfg"
+    fi
+}
+
+# True if an inbound with this tag is already in config.json.
+inbound_installed() {
+    local tag="$1" cfg="$INSTALL_DIR/configs/config.json"
+    [[ -f "$cfg" ]] && jq -e --arg tag "$tag" '.inbounds[]? | select(.tag == $tag)' "$cfg" >/dev/null 2>&1
+}
+
 render_qr() {
     local data="$1"
     local venv_py="$INSTALL_DIR/.venv/bin/python"

@@ -73,12 +73,17 @@ case "${ID:-}" in
 esac
 ok "$(m "Dependencies installed" "Зависимости установлены")"
 
-info "$(m "Fetching RedProxy v${VERSION}..." "Загружаю RedProxy v${VERSION}...")"
-rm -rf "$INSTALL_DIR"
-git clone --quiet --depth 1 "$REPO_URL" "$INSTALL_DIR"
+if [[ -d "$INSTALL_DIR/.git" ]]; then
+    info "$(m "Updating existing RedProxy install (configs and clients are preserved)..." "Обновляю существующую установку RedProxy (конфиги и клиенты сохраняются)...")"
+    git -C "$INSTALL_DIR" pull --quiet
+else
+    info "$(m "Fetching RedProxy v${VERSION}..." "Загружаю RedProxy v${VERSION}...")"
+    rm -rf "$INSTALL_DIR"
+    git clone --quiet --depth 1 "$REPO_URL" "$INSTALL_DIR"
+fi
 chmod +x "$INSTALL_DIR"/*.sh "$INSTALL_DIR"/xray/*.sh "$INSTALL_DIR"/wireguard/*.sh "$INSTALL_DIR"/utils/*.sh
 echo "$RP_LANG" > "$INSTALL_DIR/lang"
-ok "$(m "RedProxy downloaded to $INSTALL_DIR" "RedProxy загружен в $INSTALL_DIR")"
+ok "$(m "RedProxy ready in $INSTALL_DIR" "RedProxy готов в $INSTALL_DIR")"
 
 # shellcheck source=./utils/colors.sh
 source "$INSTALL_DIR/utils/colors.sh"
@@ -121,12 +126,14 @@ ok "$(m "Installed 'redproxy' command" "Команда 'redproxy' установ
 echo
 echo "$(m "Select a protocol to install:" "Выберите протокол для установки:")"
 echo "  1) VLESS + Reality        [$(m "ready" "готово")]"
-echo "  2) VLESS + WS + TLS       [$(m "coming soon" "скоро")]"
-echo "  3) VMess                  [$(m "coming soon" "скоро")]"
-echo "  4) Trojan                 [$(m "coming soon" "скоро")]"
-echo "  5) Hysteria2              [$(m "coming soon" "скоро")]"
-echo "  6) TUIC                   [$(m "coming soon" "скоро")]"
-echo "  7) WireGuard              [$(m "coming soon" "скоро")]"
+echo "  2) SOCKS5 Proxy           [$(m "ready" "готово")]"
+echo "  3) HTTP Proxy             [$(m "ready" "готово")]"
+echo "  4) VLESS + WS + TLS       [$(m "coming soon" "скоро")]"
+echo "  5) VMess                  [$(m "coming soon" "скоро")]"
+echo "  6) Trojan                 [$(m "coming soon" "скоро")]"
+echo "  7) Hysteria2              [$(m "coming soon" "скоро")]"
+echo "  8) TUIC                   [$(m "coming soon" "скоро")]"
+echo "  9) WireGuard              [$(m "coming soon" "скоро")]"
 read -rp "> " choice
 
 case "$choice" in
@@ -146,11 +153,41 @@ case "$choice" in
         source "$INSTALL_DIR/xray/reality.sh"
         reality_install "$port" "$sni"
         ;;
+    2)
+        while true; do
+            read -rp "$(m "Port [1080]: " "Порт [1080]: ")" port; port=${port:-1080}
+            if port_in_use "$port"; then
+                warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
+                port_owner "$port"
+                warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
+                continue
+            fi
+            break
+        done
+        # shellcheck source=./xray/socks5.sh
+        source "$INSTALL_DIR/xray/socks5.sh"
+        socks5_install "$port"
+        ;;
+    3)
+        while true; do
+            read -rp "$(m "Port [8080]: " "Порт [8080]: ")" port; port=${port:-8080}
+            if port_in_use "$port"; then
+                warn "$(m "Port $port is already in use on this server:" "Порт $port уже занят на этом сервере:")"
+                port_owner "$port"
+                warn "$(m "Pick a different port (or stop whatever's using it first)." "Выберите другой порт (или сначала остановите то, что его занимает).")"
+                continue
+            fi
+            break
+        done
+        # shellcheck source=./xray/http.sh
+        source "$INSTALL_DIR/xray/http.sh"
+        http_install "$port"
+        ;;
     *)
         warn "$(m "That protocol isn't implemented yet in v${VERSION}." "Этот протокол пока не реализован в v${VERSION}.")"
-        warn "$(m "Run 'redproxy' later to install VLESS+Reality, or watch the repo for updates." "Запустите 'redproxy' позже, чтобы установить VLESS+Reality, или следите за обновлениями репозитория.")"
+        warn "$(m "Run 'redproxy' later to manage installed protocols, or run install.sh again to add another one." "Запустите 'redproxy' позже для управления установленными протоколами, либо запустите install.sh снова, чтобы добавить ещё один.")"
         ;;
 esac
 
 echo
-ok "$(m "RedProxy installed. Run 'redproxy' anytime to manage clients." "RedProxy установлен. Запустите 'redproxy' в любой момент для управления клиентами.")"
+ok "$(m "Done. Run 'redproxy' anytime to manage clients, or run install.sh again to add another protocol." "Готово. Запустите 'redproxy' в любой момент для управления клиентами, либо запустите install.sh снова, чтобы добавить ещё один протокол.")"

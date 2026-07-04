@@ -2,8 +2,19 @@
 
 One-command proxy deployer for VPS. Point it at a fresh Debian/Ubuntu or
 RHEL-family server and it installs Xray-core, generates a client, and hands
-you back a ready-to-use `vless://` link and a terminal QR code — no web
-panel required.
+you back a ready-to-use link and a terminal QR code — no web panel
+required.
+
+Covers two different needs:
+- **VLESS + Reality** — a TLS-camouflaged tunnel for bypassing censorship/DPI.
+- **SOCKS5 / HTTP proxy** (username+password auth) — a plain proxy for
+  pointing apps like Telegram or WhatsApp at, browser/curl proxy settings,
+  or commercial proxy resale. No TLS camouflage, just a fast authenticated
+  relay.
+
+All three can be installed on the same server at once (each on its own
+port) — run `install.sh` again to add another one; existing clients and
+configs are preserved.
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/thedarkkness/RedProxy/main/install.sh)
@@ -21,7 +32,8 @@ management) speaks that language from then on.
 - ✓ Enables BBR congestion control
 - ✓ Creates an unprivileged `redproxy` system user
 - ✓ Installs Xray-core and a systemd service (`redproxy-xray`)
-- ✓ Generates Reality keys and a first client
+- ✓ Checks the chosen port is actually free before configuring anything
+- ✓ Generates Reality keys / a SOCKS5 or HTTP account, and a first client
 - ✓ Prints the connection link **and** a scannable QR code
 - ✓ Saves everything under `/opt/redproxy`
 
@@ -44,20 +56,48 @@ vless://8f14e45f-...@12.34.56.78:443?...#RedProxy-client1
 █ ███ █ █▀▀▀▄█ █ ███ █
 █ ▀▀▀ █ █▀ █▀█ █ ▀▀▀ █
 ════════════════════════════════════════════════════
- Saved: /opt/redproxy/clients/client1.json
+ Saved: /opt/redproxy/clients/reality-client1.json
+════════════════════════════════════════════════════
+```
+
+A SOCKS5/HTTP client card looks similar but prints a username/password
+and both a `socks5://`/`http://` link *and* a plain
+`host:port:user:pass` line for apps (like Telegram/WhatsApp) that want
+the fields typed in separately rather than pasted as a URL:
+
+```
+════════════════════════════════════════════════════
+ RedProxy Client: alice
+════════════════════════════════════════════════════
+ Protocol: SOCKS5
+ Server: 12.34.56.78
+ Port: 1080
+ Username: alice
+ Password: 9f3a1b2c4d5e6f70
+════════════════════════════════════════════════════
+socks5://alice:9f3a1b2c4d5e6f70@12.34.56.78:1080#RedProxy-alice
+════════════════════════════════════════════════════
+█▀▀▀▀▀█ ▀▄▀█▄ █▀▀▀▀▀█
+█ ███ █ █▀▀▀▄█ █ ███ █
+█ ▀▀▀ █ █▀ █▀█ █ ▀▀▀ █
+════════════════════════════════════════════════════
+ Manual entry (host:port:user:pass): 12.34.56.78:1080:alice:9f3a1b2c4d5e6f70
+ Saved: /opt/redproxy/clients/socks5-alice.json
 ════════════════════════════════════════════════════
 ```
 
 ## Managing clients
 
 After install, `redproxy` is available on the server as both an interactive
-menu and a CLI:
+menu and a CLI. If more than one protocol is installed, `add`/`remove`/`qr`
+ask which one to act on; `list` shows every installed protocol's clients
+together:
 
 ```bash
 redproxy              # interactive menu
 redproxy add alice    # add a client
 redproxy remove alice # remove a client
-redproxy list         # list clients
+redproxy list         # list clients (all installed protocols)
 redproxy qr alice     # reprint link + QR
 redproxy backup        # tar.gz of configs + clients
 redproxy update         # git pull + refresh Xray-core
@@ -66,7 +106,7 @@ redproxy restart         # restart the xray service
 
 ```
 ════════════════════════════════════════════════════
- RedProxy v0.0.4
+ RedProxy v0.0.6
 ════════════════════════════════════════════════════
   1) Add Client
   2) Delete Client
@@ -85,16 +125,18 @@ redproxy restart         # restart the xray service
 | Protocol          | Status         |
 |--------------------|----------------|
 | VLESS + Reality     | ✅ Ready        |
-| VLESS + WS + TLS     | 🚧 Coming soon |
-| VMess                 | 🚧 Coming soon |
-| Trojan                 | 🚧 Coming soon |
-| Hysteria2                | 🚧 Coming soon |
-| TUIC                       | 🚧 Coming soon |
-| WireGuard                    | 🚧 Coming soon |
+| SOCKS5 Proxy          | ✅ Ready        |
+| HTTP Proxy              | ✅ Ready        |
+| VLESS + WS + TLS          | 🚧 Coming soon |
+| VMess                       | 🚧 Coming soon |
+| Trojan                       | 🚧 Coming soon |
+| Hysteria2                      | 🚧 Coming soon |
+| TUIC                              | 🚧 Coming soon |
+| WireGuard                           | 🚧 Coming soon |
 
-RedProxy is versioned early on purpose (`0.0.1`) — VLESS+Reality is fully
-built out first, the rest follow protocol-by-protocol. See
-[CHANGELOG.md](CHANGELOG.md).
+RedProxy is versioned early on purpose (`0.0.x`) — the tunneling protocol
+(Reality) and the plain proxies (SOCKS5/HTTP) were built out first, the
+rest follow protocol-by-protocol. See [CHANGELOG.md](CHANGELOG.md).
 
 ## Project layout
 
@@ -107,17 +149,25 @@ RedProxy/
 ├── xray/
 │   ├── install_xray.sh         # installs the Xray-core binary + systemd unit
 │   ├── reality.sh                # VLESS + Reality (fully implemented)
-│   ├── vless.sh                    # VLESS + WS + TLS (stub)
-│   ├── vmess.sh                      # VMess (stub)
-│   ├── trojan.sh                       # Trojan (stub)
-│   ├── hysteria2.sh                       # Hysteria2 (stub)
-│   └── tuic.sh                               # TUIC (stub)
+│   ├── authproxy.sh                # shared SOCKS5/HTTP logic
+│   ├── socks5.sh                     # SOCKS5 proxy (fully implemented)
+│   ├── http.sh                         # HTTP proxy (fully implemented)
+│   ├── vless.sh                          # VLESS + WS + TLS (stub)
+│   ├── vmess.sh                            # VMess (stub)
+│   ├── trojan.sh                             # Trojan (stub)
+│   ├── hysteria2.sh                             # Hysteria2 (stub)
+│   └── tuic.sh                                     # TUIC (stub)
 ├── wireguard/
-│   └── wireguard.sh                              # WireGuard (stub)
-├── templates/                                       # xray config + systemd unit templates
-├── utils/                                              # shared bash helpers + QR renderer (Python)
-└── clients/                                              # generated client configs (created on the server)
+│   └── wireguard.sh                                    # WireGuard (stub)
+├── templates/                                             # xray config + systemd unit templates
+├── utils/                                                    # shared bash helpers + QR renderer (Python)
+└── clients/                                                    # generated client configs (created on the server)
 ```
+
+Every protocol is a tagged inbound inside one shared `config.json` and one
+`redproxy-xray` systemd service — installing a second or third protocol
+appends to that file instead of replacing it, so existing clients keep
+working.
 
 ## Local development
 

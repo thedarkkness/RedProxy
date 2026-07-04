@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.6] - 2026-07-04
+
+### Added
+- **SOCKS5 and HTTP proxy support** (username/password auth), installable as options 2 and 3 in `install.sh` alongside VLESS+Reality. Meant for plain proxy use — Telegram/WhatsApp proxy settings, browser/curl proxy config, or commercial proxy resale — rather than censorship circumvention: no TLS camouflage, just a fast authenticated relay. Client cards print a `socks5://`/`http://` link, a QR code, and a plain `host:port:user:pass` line for apps that want the fields typed in separately. Shared install/add/remove/list/qr logic lives in `xray/authproxy.sh`; `xray/socks5.sh` and `xray/http.sh` are thin wrappers over it.
+- All three protocols (Reality, SOCKS5, HTTP) can now be installed on the same server at once, each as its own tagged inbound inside one shared `config.json` run by one `redproxy-xray` service. `redproxy add`/`remove`/`qr` ask which installed protocol to act on when more than one is present; `redproxy list` shows every installed protocol's clients together.
+
+### Fixed
+- **Critical:** `install.sh` deleted and re-cloned `/opt/redproxy` on every run (`rm -rf` + `git clone`), which wiped out any already-installed protocol's config and clients the moment you ran the installer again to add a second one — the opposite of what "add SOCKS5 alongside your existing Reality install" requires. It now `git pull`s in place when a previous install is detected, only doing a fresh clone the first time.
+- `reality_install` used to overwrite `config.json` wholesale from a template and assumed its inbound was always `.inbounds[0]`; both assumptions broke as soon as a second protocol could share the file. It now appends a tagged (`reality-in`) inbound and looks itself up by tag, matching the same pattern SOCKS5/HTTP use.
+
 ## [0.0.5] - 2026-07-04
 
 ### Fixed
