@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.0] - 2026-07-04
+
+### Added
+- **MTProto proxy** (install option 4), via [mtg](https://github.com/9seconds/mtg) — Telegram's own proxy protocol with fake-TLS obfuscation, so it blends in as ordinary HTTPS to a real masquerade domain. Telegram supports it natively (no separate client app needed), unlike Reality. This is meant specifically for cases where plain SOCKS5/HTTP gets blocked by DPI that fingerprints unobfuscated proxy traffic to Telegram (common on heavily-censored networks) — the fake-TLS handshake survives that where raw SOCKS5 doesn't.
+  - mtg deliberately supports one shared secret per server (upstream's explicit design choice); `redproxy add`/`remove`/`qr`/`list` work the same as other protocols but operate on locally-labeled copies of that one link — documented clearly in the client card and in `redproxy remove`'s output so it isn't mistaken for real per-user revocation.
+  - Runs as its own binary/config/systemd service (`redproxy-mtg`), separate from the shared Xray process Reality/SOCKS5/HTTP use, since MTProto isn't an Xray protocol.
+  - `redproxy restart` now restarts both `redproxy-xray` and `redproxy-mtg` (whichever are installed) instead of only Xray.
+  - `uninstall.sh` now also removes the `mtg` binary and `redproxy-mtg` service.
+
 ## [0.1.2] - 2026-07-04
 
 ### Added

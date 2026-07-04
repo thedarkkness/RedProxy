@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Removes RedProxy, Xray-core, the systemd unit and all client data.
+# Removes RedProxy, Xray-core, mtg (MTProto), their systemd units and all
+# client data.
 set -euo pipefail
 
 INSTALL_DIR="/opt/redproxy"
@@ -16,10 +17,12 @@ read -rp "$(m "This will remove RedProxy, Xray-core and all client configs. Cont
 [[ "$ans" =~ ^[Yy]$ ]] || { info "$(m "Aborted" "Отменено")"; exit 0; }
 
 systemctl disable --now redproxy-xray >/dev/null 2>&1 || true
-rm -f /etc/systemd/system/redproxy-xray.service
+systemctl disable --now redproxy-mtg >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/redproxy-xray.service /etc/systemd/system/redproxy-mtg.service
 systemctl daemon-reload
 
 rm -f /usr/local/bin/xray
+rm -f /usr/local/bin/mtg
 rm -f /usr/local/bin/redproxy
 rm -f /etc/sysctl.d/99-redproxy-bbr.conf
 

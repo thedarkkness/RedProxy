@@ -5,8 +5,9 @@
 # Interactive:  redproxy
 # Non-interactive: redproxy <add|remove|list|qr|restart|update|backup> [name]
 #
-# Several protocols (Reality, SOCKS5, HTTP) can be installed at once, each
-# as its own tagged inbound in the same config.json. Add/Delete/QR ask
+# Several protocols can be installed at once: Reality/SOCKS5/HTTP share
+# one Xray process (each its own tagged inbound in the same config.json),
+# MTProto runs as its own separate mtg process/service. Add/Delete/QR ask
 # which protocol to act on when more than one is installed; List shows
 # every installed protocol's clients together.
 set -euo pipefail
@@ -24,6 +25,8 @@ source "$INSTALL_DIR/xray/socks5.sh"
 source "$INSTALL_DIR/xray/http.sh"
 # shellcheck source=./xray/status.sh
 source "$INSTALL_DIR/xray/status.sh"
+# shellcheck source=./mtproto/mtproto.sh
+source "$INSTALL_DIR/mtproto/mtproto.sh"
 load_lang
 
 VERSION=$(cat "$INSTALL_DIR/VERSION" 2>/dev/null || echo "0.0.1")
@@ -35,6 +38,7 @@ list_installed_protocols() {
     { inbound_installed "$REALITY_TAG" && printf '%s\t%s\t%s\n' "$REALITY_TAG" "VLESS+Reality" "reality"; } || true
     { inbound_installed "$SOCKS5_TAG" && printf '%s\t%s\t%s\n' "$SOCKS5_TAG" "SOCKS5" "socks5"; } || true
     { inbound_installed "$HTTP_TAG" && printf '%s\t%s\t%s\n' "$HTTP_TAG" "HTTP" "http"; } || true
+    { mtproto_installed && printf '%s\t%s\t%s\n' "mtproto" "MTProto" "mtproto"; } || true
 }
 
 # Prints one "tag<TAB>label<TAB>prefix" row: the only installed protocol,
@@ -84,6 +88,9 @@ dispatch() {
         "${HTTP_TAG}:add")       http_add_client "$name" ;;
         "${HTTP_TAG}:remove")    http_remove_client "$name" ;;
         "${HTTP_TAG}:qr")        http_show_qr "$name" ;;
+        "mtproto:add")           mtproto_add_client "$name" ;;
+        "mtproto:remove")        mtproto_remove_client "$name" ;;
+        "mtproto:qr")            mtproto_show_qr "$name" ;;
     esac
 }
 
@@ -139,7 +146,20 @@ list_all_clients() {
         http_list_clients
         any=1
     fi
+    if mtproto_installed; then
+        echo "-- MTProto --"
+        mtproto_list_clients
+        any=1
+    fi
     [[ $any -eq 1 ]] || err "$(m "No protocol installed yet. Run install.sh again to add one." "Протокол ещё не установлен. Запустите install.sh снова, чтобы добавить.")"
+}
+
+restart_services() {
+    systemctl restart redproxy-xray >/dev/null 2>&1 || true
+    if mtproto_installed; then
+        systemctl restart redproxy-mtg >/dev/null 2>&1 || true
+    fi
+    ok "$(m "Restarted" "Перезапущено")"
 }
 
 show_menu() {
@@ -167,7 +187,7 @@ show_menu() {
             3) list_all_clients ;;
             4) dispatch qr ;;
             5) redproxy_status ;;
-            6) systemctl restart redproxy-xray && ok "$(m "Restarted" "Перезапущено")" ;;
+            6) restart_services ;;
             7) check_for_updates ;;
             8) bash "$INSTALL_DIR/utils/backup.sh" ;;
             9) warn "$(m "Change Port is not implemented yet in v${VERSION}" "Смена порта пока не реализована в v${VERSION}")" ;;
@@ -191,7 +211,7 @@ case "$cmd" in
     list|ls)           list_all_clients ;;
     qr)                shift; dispatch qr "${1:-}" ;;
     status)            redproxy_status ;;
-    restart)           systemctl restart redproxy-xray && ok "$(m "Restarted" "Перезапущено")" ;;
+    restart)           restart_services ;;
     check-update)      check_for_updates ;;
     update)            bash "$INSTALL_DIR/update.sh" ;;
     backup)            bash "$INSTALL_DIR/utils/backup.sh" ;;

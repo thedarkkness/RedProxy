@@ -21,7 +21,7 @@ info "$(m "Pulling latest RedProxy scripts..." "Загружаю последн�
 # blocks the pull unless file-mode diffs are ignored on this checkout.
 git -C "$INSTALL_DIR" config core.fileMode false
 git -C "$INSTALL_DIR" pull --quiet
-chmod +x "$INSTALL_DIR"/*.sh "$INSTALL_DIR"/xray/*.sh "$INSTALL_DIR"/wireguard/*.sh "$INSTALL_DIR"/utils/*.sh
+chmod +x "$INSTALL_DIR"/*.sh "$INSTALL_DIR"/xray/*.sh "$INSTALL_DIR"/wireguard/*.sh "$INSTALL_DIR"/mtproto/*.sh "$INSTALL_DIR"/utils/*.sh
 
 info "$(m "Updating Xray-core..." "Обновляю Xray-core...")"
 bash "$INSTALL_DIR/xray/install_xray.sh"

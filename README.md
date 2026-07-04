@@ -5,14 +5,21 @@ RHEL-family server and it installs Xray-core, generates a client, and hands
 you back a ready-to-use link and a terminal QR code — no web panel
 required.
 
-Covers two different needs:
+Covers a few different needs:
 - **VLESS + Reality** — a TLS-camouflaged tunnel for bypassing censorship/DPI.
+  Needs a client app (v2rayNG/NekoBox/Hiddify/v2rayN/...) since it's not a
+  protocol apps support natively.
 - **SOCKS5 / HTTP proxy** (username+password auth) — a plain proxy for
-  pointing apps like Telegram or WhatsApp at, browser/curl proxy settings,
-  or commercial proxy resale. No TLS camouflage, just a fast authenticated
-  relay.
+  pointing apps like WhatsApp at, browser/curl proxy settings, or commercial
+  proxy resale. No TLS camouflage, just a fast authenticated relay — DPI
+  that fingerprints unobfuscated proxy traffic (common in heavily-censored
+  networks) can still block it.
+- **MTProto** (via [mtg](https://github.com/9seconds/mtg)) — Telegram's own
+  proxy protocol with fake-TLS obfuscation, so it blends in as ordinary
+  HTTPS. Telegram supports it natively (Settings → Data and Storage →
+  Proxy, or a `tg://proxy?...` link) — no separate client app needed.
 
-All three can be installed on the same server at once (each on its own
+All four can be installed on the same server at once (each on its own
 port) — run `install.sh` again to add another one; existing clients and
 configs are preserved. If it detects RedProxy is already installed, it
 asks up front whether you want to manage the existing install (jumps
@@ -176,23 +183,32 @@ Which client/config do you want to watch?
 | VLESS + Reality     | ✅ Ready        |
 | SOCKS5 Proxy          | ✅ Ready        |
 | HTTP Proxy              | ✅ Ready        |
-| VLESS + WS + TLS          | 🚧 Coming soon |
-| VMess                       | 🚧 Coming soon |
-| Trojan                       | 🚧 Coming soon |
-| Hysteria2                      | 🚧 Coming soon |
-| TUIC                              | 🚧 Coming soon |
-| WireGuard                           | 🚧 Coming soon |
+| MTProto (Telegram)        | ✅ Ready        |
+| VLESS + WS + TLS              | 🚧 Coming soon |
+| VMess                            | 🚧 Coming soon |
+| Trojan                             | 🚧 Coming soon |
+| Hysteria2                            | 🚧 Coming soon |
+| TUIC                                    | 🚧 Coming soon |
+| WireGuard                                  | 🚧 Coming soon |
 
-RedProxy is versioned early on purpose (`0.0.x`) — the tunneling protocol
-(Reality) and the plain proxies (SOCKS5/HTTP) were built out first, the
-rest follow protocol-by-protocol. See [CHANGELOG.md](CHANGELOG.md).
+RedProxy is versioned early on purpose (`0.x`) — the tunneling protocol
+(Reality), the plain proxies (SOCKS5/HTTP), and MTProto were built out
+first, the rest follow protocol-by-protocol. See [CHANGELOG.md](CHANGELOG.md).
+
+**MTProto's one limitation, upfront:** [mtg](https://github.com/9seconds/mtg)
+deliberately supports a single shared secret per server (the upstream
+maintainer's explicit design choice, not something RedProxy works around).
+Every client you "add" gets a locally-labeled copy of the *same* link —
+handy for tracking who you sent it to, but removing a client only deletes
+that label, it doesn't revoke their access. Reinstalling MTProto rotates
+the secret and cuts everyone off at once if you need that.
 
 ## Project layout
 
 ```
 RedProxy/
 ├── install.sh          # one-command installer (entrypoint)
-├── uninstall.sh          # removes RedProxy + Xray + client data
+├── uninstall.sh          # removes RedProxy + Xray + mtg + client data
 ├── update.sh               # git pull + Xray-core refresh
 ├── menu.sh                   # CLI / interactive menu, symlinked to `redproxy`
 ├── xray/
@@ -207,17 +223,21 @@ RedProxy/
 │   ├── trojan.sh                             # Trojan (stub)
 │   ├── hysteria2.sh                             # Hysteria2 (stub)
 │   └── tuic.sh                                     # TUIC (stub)
+├── mtproto/
+│   └── mtproto.sh                                    # MTProto via mtg (fully implemented)
 ├── wireguard/
 │   └── wireguard.sh                                    # WireGuard (stub)
-├── templates/                                             # xray config + systemd unit templates
+├── templates/                                             # xray/mtg config + systemd unit templates
 ├── utils/                                                    # shared bash helpers + QR renderer (Python)
 └── clients/                                                    # generated client configs (created on the server)
 ```
 
-Every protocol is a tagged inbound inside one shared `config.json` and one
-`redproxy-xray` systemd service — installing a second or third protocol
-appends to that file instead of replacing it, so existing clients keep
-working.
+Reality/SOCKS5/HTTP are each a tagged inbound inside one shared
+`config.json` and one `redproxy-xray` systemd service — installing a
+second or third protocol appends to that file instead of replacing it,
+so existing clients keep working. MTProto is a separate binary
+(`mtg`), config (`configs/mtg.toml`) and service (`redproxy-mtg`), since
+it isn't an Xray protocol.
 
 ## Local development
 
