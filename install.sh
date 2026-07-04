@@ -54,6 +54,21 @@ case "$lang_choice" in
 esac
 echo
 
+# Re-running the one-liner is also how users pull updates or add a second
+# protocol, but redoing OS/dependency setup every time is unnecessary
+# noise for someone who just wants to manage what's already there.
+if [[ -d "$INSTALL_DIR/.git" ]]; then
+    echo "$(m "RedProxy is already installed on this server." "RedProxy уже установлен на этом сервере.")"
+    echo "  1) $(m "Manage existing installation (clients, status, updates...)" "Управление текущей установкой (клиенты, статус, обновления...)")"
+    echo "  2) $(m "Install another protocol / update RedProxy" "Установить ещё один протокол / обновить RedProxy")"
+    read -rp "> " existing_choice
+    echo
+    if [[ "$existing_choice" == "1" ]]; then
+        echo "$RP_LANG" > "$INSTALL_DIR/lang"
+        exec bash "$INSTALL_DIR/menu.sh"
+    fi
+fi
+
 info "$(m "Detecting OS and installing base dependencies..." "Определяю ОС и устанавливаю базовые зависимости...")"
 OS_ID=""
 [[ -r /etc/os-release ]] && . /etc/os-release

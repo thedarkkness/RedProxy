@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0] - 2026-07-04
+
+### Added
+- `install.sh` now detects an existing RedProxy install right after the language prompt and asks up front: manage the existing install (jumps straight into the `redproxy` menu, skipping OS detection/dependency setup entirely) or install another protocol / update. Previously every re-run redid the full OS setup dance regardless of what you actually wanted.
+- `redproxy` menu: **Change Language** (option 11 / `redproxy lang`) switches English/Русский on demand instead of only at install time, and takes effect immediately in the current session.
+- `redproxy` menu: **Check for Updates** (option 7 / `redproxy check-update`) compares your installed version against the repo's `VERSION` file and reports whether a newer release exists, without actually pulling it — a lightweight read-only check distinct from "Update", which performs the actual upgrade.
+
 ## [0.0.9] - 2026-07-04
 
 ### Added

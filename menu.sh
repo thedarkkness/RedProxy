@@ -87,6 +87,33 @@ dispatch() {
     esac
 }
 
+check_for_updates() {
+    local remote
+    remote=$(curl -fsSL --max-time 5 "https://raw.githubusercontent.com/thedarkkness/RedProxy/main/VERSION" 2>/dev/null | tr -d '[:space:]')
+    if [[ -z "$remote" ]]; then
+        warn "$(m "Could not check for updates (network error)" "Не удалось проверить обновления (ошибка сети)")"
+        return 1
+    fi
+    if [[ "$remote" == "$VERSION" ]]; then
+        ok "$(m "You're up to date (v${VERSION})" "У вас последняя версия (v${VERSION})")"
+    else
+        warn "$(m "New version available: v${remote} (you have v${VERSION}). Choose 'Update' to install it." "Доступна новая версия: v${remote} (у вас v${VERSION}). Выберите 'Обновить', чтобы установить.")"
+    fi
+}
+
+change_language() {
+    echo "Select language / Выберите язык:"
+    echo "  1) English"
+    echo "  2) Русский"
+    read -rp "> " lang_choice
+    case "$lang_choice" in
+        2) RP_LANG="ru" ;;
+        *) RP_LANG="en" ;;
+    esac
+    echo "$RP_LANG" > "$INSTALL_DIR/lang"
+    ok "$(m "Language changed" "Язык изменён")"
+}
+
 list_all_clients() {
     local any=0
     if inbound_installed "$REALITY_TAG"; then
@@ -119,9 +146,11 @@ show_menu() {
         echo "  4) $(m "Show QR" "Показать QR")"
         echo "  5) $(m "Live Status (traffic)" "Статус в реальном времени (трафик)")"
         echo "  6) $(m "Restart" "Перезапустить")"
-        echo "  7) $(m "Update" "Обновить")"
-        echo "  8) $(m "Backup" "Резервная копия")"
-        echo "  9) $(m "Change Port" "Сменить порт")"
+        echo "  7) $(m "Check for Updates" "Проверить обновления")"
+        echo "  8) $(m "Update" "Обновить")"
+        echo "  9) $(m "Backup" "Резервная копия")"
+        echo " 10) $(m "Change Port" "Сменить порт")"
+        echo " 11) $(m "Change Language" "Сменить язык")"
         echo "  0) $(m "Exit" "Выход")"
         line
         read -rp "$(m "Select: " "Выбор: ")" opt
@@ -132,9 +161,11 @@ show_menu() {
             4) dispatch qr ;;
             5) redproxy_status ;;
             6) systemctl restart redproxy-xray && ok "$(m "Restarted" "Перезапущено")" ;;
-            7) bash "$INSTALL_DIR/update.sh" ;;
-            8) bash "$INSTALL_DIR/utils/backup.sh" ;;
-            9) warn "$(m "Change Port is not implemented yet in v${VERSION}" "Смена порта пока не реализована в v${VERSION}")" ;;
+            7) check_for_updates ;;
+            8) bash "$INSTALL_DIR/update.sh" ;;
+            9) bash "$INSTALL_DIR/utils/backup.sh" ;;
+            10) warn "$(m "Change Port is not implemented yet in v${VERSION}" "Смена порта пока не реализована в v${VERSION}")" ;;
+            11) change_language ;;
             0) ok "$(m "Bye!" "Пока!")"; exit 0 ;;
             *) warn "$(m "Invalid option" "Неверный выбор")" ;;
         esac
@@ -155,8 +186,10 @@ case "$cmd" in
     qr)                shift; dispatch qr "${1:-}" ;;
     status)            redproxy_status ;;
     restart)           systemctl restart redproxy-xray && ok "$(m "Restarted" "Перезапущено")" ;;
+    check-update)      check_for_updates ;;
     update)            bash "$INSTALL_DIR/update.sh" ;;
     backup)            bash "$INSTALL_DIR/utils/backup.sh" ;;
+    lang)              change_language ;;
     "")                show_menu ;;
     *)                 err "$(m "Unknown command: $cmd" "Неизвестная команда: $cmd")"; exit 1 ;;
 esac

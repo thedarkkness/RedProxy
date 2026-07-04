@@ -14,7 +14,10 @@ Covers two different needs:
 
 All three can be installed on the same server at once (each on its own
 port) — run `install.sh` again to add another one; existing clients and
-configs are preserved.
+configs are preserved. If it detects RedProxy is already installed, it
+asks up front whether you want to manage the existing install (jumps
+straight into the `redproxy` menu, skipping the OS/dependency setup) or
+install another protocol / update.
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/thedarkkness/RedProxy/main/install.sh)
@@ -94,15 +97,17 @@ ask which one to act on; `list` shows every installed protocol's clients
 together:
 
 ```bash
-redproxy              # interactive menu
-redproxy add alice    # add a client
-redproxy remove alice # remove a client
-redproxy list         # list clients (all installed protocols)
-redproxy qr alice     # reprint link + QR
-redproxy status         # live traffic view (see below)
-redproxy backup           # tar.gz of configs + clients
-redproxy update             # git pull + refresh Xray-core
-redproxy restart              # restart the xray service
+redproxy               # interactive menu
+redproxy add alice     # add a client
+redproxy remove alice  # remove a client
+redproxy list          # list clients (all installed protocols)
+redproxy qr alice      # reprint link + QR
+redproxy status        # live traffic view (see below)
+redproxy check-update   # check if a newer RedProxy version exists
+redproxy update          # git pull + refresh Xray-core
+redproxy backup            # tar.gz of configs + clients
+redproxy restart             # restart the xray service
+redproxy lang                  # switch English / Русский
 ```
 
 ```
@@ -115,12 +120,18 @@ redproxy restart              # restart the xray service
   4) Show QR
   5) Live Status (traffic)
   6) Restart
-  7) Update
-  8) Backup
-  9) Change Port
+  7) Check for Updates
+  8) Update
+  9) Backup
+ 10) Change Port
+ 11) Change Language
   0) Exit
 ════════════════════════════════════════════════════
 ```
+
+"Check for Updates" just compares your version against the repo's
+`VERSION` file and tells you if a newer release exists — "Update" is the
+one that actually pulls it and restarts Xray.
 
 ### Live status
 
